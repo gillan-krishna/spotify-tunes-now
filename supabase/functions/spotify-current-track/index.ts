@@ -15,29 +15,15 @@ serve(async (req) => {
   try {
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
       { auth: { persistSession: false } }
     )
 
-    // Get current user from auth header
-    const authHeader = req.headers.get('Authorization')
-    const token = authHeader?.replace('Bearer ', '')
-    
-    if (!token) {
-      throw new Error('No authorization token provided')
-    }
-
-    const { data: { user } } = await supabaseClient.auth.getUser(token)
-    
-    if (!user) {
-      throw new Error('User not found')
-    }
-
-    // Get Spotify tokens for user
+    // Get Spotify tokens for the main user (fixed ID)
     const { data: tokenData, error: tokenError } = await supabaseClient
       .from('spotify_tokens')
       .select('*')
-      .eq('user_id', user.id)
+      .eq('id', 1)
       .single()
 
     if (tokenError || !tokenData) {
@@ -74,7 +60,7 @@ serve(async (req) => {
             access_token: refreshTokens.access_token,
             expires_at: new Date(Date.now() + refreshTokens.expires_in * 1000).toISOString()
           })
-          .eq('user_id', user.id)
+          .eq('id', 1)
       }
     }
 

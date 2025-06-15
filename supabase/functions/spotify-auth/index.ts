@@ -15,7 +15,7 @@ serve(async (req) => {
   try {
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
       { auth: { persistSession: false } }
     )
 
@@ -67,31 +67,22 @@ serve(async (req) => {
         throw new Error(tokens.error_description || 'Failed to exchange code for tokens')
       }
 
-      // Get current user from auth header
-      const authHeader = req.headers.get('Authorization')
-      const token = authHeader?.replace('Bearer ', '')
-      
-      if (token) {
-        const { data: { user } } = await supabaseClient.auth.getUser(token)
-        
-        if (user) {
-          // Store tokens in database
-          const { error } = await supabaseClient
-            .from('spotify_tokens')
-            .upsert({
-              user_id: user.id,
-              access_token: tokens.access_token,
-              refresh_token: tokens.refresh_token,
-              expires_at: new Date(Date.now() + tokens.expires_in * 1000).toISOString(),
-              token_type: tokens.token_type,
-              scope: tokens.scope
-            })
+      // Store tokens for the main user (use a fixed ID)
+      const { error } = await supabaseClient
+        .from('spotify_tokens')
+        .upsert({
+          id: 1, // Fixed ID for the main user
+          user_id: '00000000-0000-0000-0000-000000000000', // Fixed UUID
+          access_token: tokens.access_token,
+          refresh_token: tokens.refresh_token,
+          expires_at: new Date(Date.now() + tokens.expires_in * 1000).toISOString(),
+          token_type: tokens.token_type,
+          scope: tokens.scope
+        })
 
-          if (error) {
-            console.error('Error storing tokens:', error)
-            throw error
-          }
-        }
+      if (error) {
+        console.error('Error storing tokens:', error)
+        throw error
       }
 
       return new Response(
