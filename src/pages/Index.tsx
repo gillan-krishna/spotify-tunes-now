@@ -61,10 +61,16 @@ const Index = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="flex-1 min-w-0">
-          <h3 className="text-sm font-medium text-gray-900 truncate">{track?.name}</h3>
-          <p className="text-sm text-gray-500 truncate">{track?.artists?.join(', ')}</p>
+      <div className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-800 flex items-center justify-center p-4">
+        <div className="bg-white/10 backdrop-blur-md rounded-2xl p-8 max-w-md w-full text-center">
+          <h2 className="text-2xl font-bold text-white mb-4">Error</h2>
+          <p className="text-red-300 mb-6">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="bg-white/10 hover:bg-white/20 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+          >
+            Try Again
+          </button>
         </div>
       </div>
     );
@@ -93,7 +99,7 @@ const Index = () => {
                 <img 
                   src={track.album_art} 
                   alt={track.album}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover rounded-2xl"
                 />
               )}
             </div>
@@ -112,7 +118,9 @@ const Index = () => {
             <h1 className="text-3xl font-bold text-white mb-2 tracking-tight">
               {track.name}
             </h1>
-            <p className="text-xl text-white/70 mb-1">{track.artists.join(', ')}</p>
+            <p className="text-xl text-white/70 mb-1">
+              {Array.isArray(track.artists) ? track.artists.join(', ') : track.artists}
+            </p>
             <p className="text-lg text-white/50">{track.album}</p>
           </div>
 

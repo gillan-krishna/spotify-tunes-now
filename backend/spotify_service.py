@@ -9,24 +9,23 @@ from dotenv import load_dotenv
 # Initialize Flask app
 app = Flask(__name__)
 
-# Configure CORS for all domains
+# Configure CORS for allowed domains
+# Only allow frontend origin and Spotify OAuth callback
 ALLOWED_ORIGINS = [
-    "https://www.gillan.in",
-    "https://spotify-tunes-now.onrender.com",
-    "https://spotify-tunes-now-git-main-gillans-projects.vercel.app",
-    "http://localhost:3000",  # For local development
-    "http://localhost:5173",   # Vite default port
-    "http://127.0.0.1:3000",   # Alternative localhost
-    "http://127.0.0.1:5173",   # Alternative Vite port
-    "https://spotify-tunes-now.vercel.app"  # Vercel deployment URL
+    "http://localhost:3000",  # Frontend dev server
+    "http://127.0.0.1:3000"   # Alternative localhost for frontend
 ]
 
-# Add custom domain if not already in the list
-custom_domain = os.getenv('CUSTOM_DOMAIN')
-if custom_domain and custom_domain not in ALLOWED_ORIGINS:
-    ALLOWED_ORIGINS.append(custom_domain)
-    ALLOWED_ORIGINS.append(f"https://{custom_domain}")
-    ALLOWED_ORIGINS.append(f"http://{custom_domain}")
+# Add production domains if not already in the list
+production_domains = [
+    "https://www.gillan.in",
+    "https://spotify-tunes-now.onrender.com",
+    "https://spotify-tunes-now.vercel.app"
+]
+
+for domain in production_domains:
+    if domain not in ALLOWED_ORIGINS:
+        ALLOWED_ORIGINS.append(domain)
 
 # Enable CORS with more permissive settings for development
 CORS(
@@ -67,43 +66,36 @@ def get_spotify_client():
     """
     client_id = os.getenv('SPOTIFY_CLIENT_ID')
     client_secret = os.getenv('SPOTIFY_CLIENT_SECRET')
-    access_token = os.getenv('SPOTIFY_ACCESS_TOKEN')
     refresh_token = os.getenv('SPOTIFY_REFRESH_TOKEN')
-    expires_at = float(os.getenv('SPOTIFY_TOKEN_EXPIRES_AT', '0'))
     
-    if not all([client_id, client_secret, access_token, refresh_token]):
+    if not all([client_id, client_secret, refresh_token]):
         raise ValueError("Missing required Spotify API credentials. Please run auth_spotify.py first.")
     
-    # Check if token needs refreshing
-    if time.time() > expires_at - 60:  # Refresh if less than 1 minute until expiration
-        auth_manager = SpotifyOAuth(
-            client_id=client_id,
-            client_secret=client_secret,
-            redirect_uri=os.getenv('SPOTIFY_REDIRECT_URI', 'http://127.0.0.1:8888/callback'),
-            scope='user-read-currently-playing user-read-playback-state',
-            cache_path=None
-        )
-        
-        # Create a new token info dict with refresh token
-        token_info = {
-            'access_token': access_token,
-            'refresh_token': refresh_token,
-            'expires_at': expires_at,
-            'scope': os.getenv('SPOTIFY_TOKEN_SCOPE', '')
-        }
-        
-        # Refresh the token if needed
-        if time.time() > expires_at - 60:  # If token is expired or about to expire
-            token_info = auth_manager.refresh_access_token(refresh_token)
-            
-            # Save the new tokens to .env
-            from auth_spotify import save_tokens_to_env
-            save_tokens_to_env(token_info)
-            
-        return spotipy.Spotify(auth_manager=auth_manager)
+    auth_manager = SpotifyOAuth(
+        client_id=client_id,
+        client_secret=client_secret,
+        redirect_uri=os.getenv('SPOTIFY_REDIRECT_URI', 'http://127.0.0.1:8888/callback'),
+        scope='user-read-currently-playing user-read-playback-state',
+        cache_path=None
+    )
     
-    # If token is still valid, use it directly
-    return spotipy.Spotify(auth=access_token)
+    # Create a new token info dict with refresh token
+    token_info = {
+        'access_token': os.getenv('SPOTIFY_ACCESS_TOKEN'),
+        'refresh_token': refresh_token,
+        'expires_at': float(os.getenv('SPOTIFY_TOKEN_EXPIRES_AT', '0')),
+        'scope': os.getenv('SPOTIFY_TOKEN_SCOPE', '')
+    }
+    
+    # Refresh the token if needed
+    if time.time() > token_info['expires_at'] - 60:  # If token is expired or about to expire
+        token_info = auth_manager.refresh_access_token(refresh_token)
+        
+        # Save the new tokens to .env
+        from auth_spotify import save_tokens_to_env
+        save_tokens_to_env(token_info)
+    
+    return spotipy.Spotify(auth_manager=auth_manager)
 
 @app.route('/')
 def home():
