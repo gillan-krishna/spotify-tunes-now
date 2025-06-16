@@ -11,9 +11,9 @@ export default defineConfig(({ mode }) => ({
     strictPort: true,  // Don't try to find another port if 3000 is in use
     proxy: {
       '/api': {
-        target: 'http://localhost:5000',  // Backend runs on port 5000
+        target: 'https://spotify-tunes-now.onrender.com',
         changeOrigin: true,
-        secure: false,
+        secure: true,
         ws: true,
         // Keep /api in the URL path when forwarding to backend
         rewrite: (path) => {
@@ -35,6 +35,7 @@ export default defineConfig(({ mode }) => ({
     },
     cors: true,
     hmr: {
+      host: 'localhost',
       clientPort: 3000
     }
   },

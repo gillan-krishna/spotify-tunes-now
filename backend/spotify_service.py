@@ -34,7 +34,7 @@ CORS(
         r"/*": {
             "origins": "*" if os.getenv('FLASK_ENV') == 'development' else ALLOWED_ORIGINS,
             "methods": ["GET", "OPTIONS", "POST", "PUT", "DELETE"],
-            "allow_headers": ["Content-Type", "Authorization"],
+            "allow_headers": ["Content-Type", "Authorization", "X-Requested-With"],
             "expose_headers": ["Content-Type"],
             "supports_credentials": True
         }
