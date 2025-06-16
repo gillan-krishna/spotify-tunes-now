@@ -14,7 +14,7 @@ export interface Track {
   name: string;
   artists: string[];
   album: string;
-  album_art: string;
+  album_art: string | null;
   duration_ms: number;
   progress_ms: number;
 }
@@ -38,9 +38,16 @@ export const getCurrentlyPlaying = async (): Promise<CurrentlyPlayingResponse> =
     const endpoint = '/api/current-track';
     const url = import.meta.env.PROD 
       ? `${API_BASE}${endpoint}`
-      : endpoint; // In development, use relative URL that will be handled by the proxy
+      : endpoint;
     console.log(`[DEBUG] Fetching from: ${url}`);
-    const response = await fetch(url);
+    
+    const response = await fetch(url, {
+      credentials: 'include',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      }
+    });
     
     // Check if response is OK (status 200-299)
     if (!response.ok) {
@@ -49,18 +56,29 @@ export const getCurrentlyPlaying = async (): Promise<CurrentlyPlayingResponse> =
       throw new Error(`HTTP error! status: ${response.status}`);
     }
     
-    // Parse response as text first to handle potential non-JSON responses
-    const responseText = await response.text();
-    let data;
+    const data = await response.json();
     
-    try {
-      data = responseText ? JSON.parse(responseText) : {};
-    } catch (parseError) {
-      console.error('[ERROR] Failed to parse JSON:', responseText);
-      throw new Error('Invalid JSON response from server');
+    // Log the raw response for debugging
+    console.log('[DEBUG] Raw API response:', data);
+    
+    // If no track is playing, return early with is_playing: false
+    if (!data.is_playing || !data.track) {
+      return { is_playing: false };
     }
     
-    return data;
+    // Format the response to match our frontend interface
+    return {
+      is_playing: data.is_playing,
+      track: {
+        id: data.track.id,
+        name: data.track.name,
+        artists: data.track.artists,
+        album: data.track.album,
+        album_art: data.track.album_art,
+        duration_ms: data.track.duration_ms,
+        progress_ms: data.track.progress_ms || 0
+      }
+    };
   } catch (error) {
     console.error('Error fetching current track:', error);
     throw error;
