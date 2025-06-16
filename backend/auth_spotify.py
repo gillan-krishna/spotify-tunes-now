@@ -10,7 +10,7 @@ def authenticate_spotify():
     # Get credentials from environment variables
     client_id = os.getenv('SPOTIFY_CLIENT_ID')
     client_secret = os.getenv('SPOTIFY_CLIENT_SECRET')
-    redirect_uri = os.getenv('SPOTIFY_REDIRECT_URI', 'http://127.0.0.1:8888/callback')
+    redirect_uri = os.getenv('SPOTIFY_REDIRECT_URI', 'https://spotify-tunes-now.onrender.com/callback')
     
     if not client_id or not client_secret:
         print("Error: Please set SPOTIFY_CLIENT_ID and SPOTIFY_CLIENT_SECRET in your .env file")
