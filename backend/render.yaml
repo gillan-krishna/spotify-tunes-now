@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: spotify-tunes-now-backend
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn spotify_service:app
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.9.0
+      - key: SPOTIFY_CLIENT_ID
+        fromService:
+          name: spotify-tunes-now
+          type: web
+          envVarKey: SPOTIFY_CLIENT_ID
+      - key: SPOTIFY_CLIENT_SECRET
+        fromService:
+          name: spotify-tunes-now
+          type: web
+          envVarKey: SPOTIFY_CLIENT_SECRET
+      - key: CUSTOM_DOMAIN
+        value: api.yourcustomdomain.com  # Replace with your actual custom domain for the API

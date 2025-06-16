@@ -36,3 +36,4 @@ supabase/.env.*
 dist/
 build/
 coverage/
+.env.example

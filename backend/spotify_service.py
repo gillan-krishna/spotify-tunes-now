@@ -10,19 +10,48 @@ from dotenv import load_dotenv
 app = Flask(__name__)
 
 # Configure CORS for all domains
-CORS(app, resources={
-    r"/*": {
-        "origins": [
-            "https://www.gillan.in",
-            "https://spotify-tunes-now.onrender.com",
-            "https://spotify-tunes-now-git-main-gillans-projects.vercel.app",
-            "http://localhost:3000"  # For local development
-        ],
-        "methods": ["GET", "OPTIONS"],
-        "allow_headers": ["Content-Type"],
-        "supports_credentials": True
-    }
-})
+ALLOWED_ORIGINS = [
+    "https://www.gillan.in",
+    "https://spotify-tunes-now.onrender.com",
+    "https://spotify-tunes-now-git-main-gillans-projects.vercel.app",
+    "http://localhost:3000",  # For local development
+    "http://localhost:5173",   # Vite default port
+    "http://127.0.0.1:3000",   # Alternative localhost
+    "http://127.0.0.1:5173",   # Alternative Vite port
+    "https://spotify-tunes-now.vercel.app"  # Vercel deployment URL
+]
+
+# Add custom domain if not already in the list
+custom_domain = os.getenv('CUSTOM_DOMAIN')
+if custom_domain and custom_domain not in ALLOWED_ORIGINS:
+    ALLOWED_ORIGINS.append(custom_domain)
+    ALLOWED_ORIGINS.append(f"https://{custom_domain}")
+    ALLOWED_ORIGINS.append(f"http://{custom_domain}")
+
+# Enable CORS with more permissive settings for development
+CORS(
+    app,
+    resources={
+        r"/*": {
+            "origins": "*" if os.getenv('FLASK_ENV') == 'development' else ALLOWED_ORIGINS,
+            "methods": ["GET", "OPTIONS", "POST", "PUT", "DELETE"],
+            "allow_headers": ["Content-Type", "Authorization"],
+            "expose_headers": ["Content-Type"],
+            "supports_credentials": True
+        }
+    },
+    supports_credentials=True
+)
+
+# Add CORS headers to all responses
+@app.after_request
+def after_request(response):
+    response.headers.add('Access-Control-Allow-Origin', 
+                        '*' if os.getenv('FLASK_ENV') == 'development' else ','.join(ALLOWED_ORIGINS))
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
+    response.headers.add('Access-Control-Allow-Credentials', 'true')
+    return response
 
 # Load environment variables
 load_dotenv()

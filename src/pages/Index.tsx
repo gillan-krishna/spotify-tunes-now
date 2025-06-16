@@ -14,25 +14,36 @@ const Index = () => {
   // Fetch current track from Spotify
   const fetchTrack = async () => {
     try {
+      console.log('[DEBUG] Fetching track data...');
       const response = await getCurrentlyPlaying();
-      console.log("[DEBUG] Frontend response from getCurrentlyPlaying:", response);
+      console.log('[DEBUG] Raw API response:', response);
+      
+      if (!response) {
+        throw new Error('No response from server');
+      }
+      
       if (response.error) {
+        console.error('[ERROR] API Error:', response.error);
         setError(response.error);
-        setTrack(null); // Clear track if there's an error
+        setTrack(null);
         setIsPlaying(false);
         return;
       }
       
       if (!response.is_playing) {
+        console.log('[DEBUG] No track currently playing');
         setTrack(null);
         setIsPlaying(false);
         return;
       }
 
       if (response.track) {
+        console.log('[DEBUG] Received track:', response.track.name);
         setTrack(response.track);
         setIsPlaying(response.is_playing);
         setProgress((response.track.progress_ms / response.track.duration_ms) * 100);
+      } else {
+        console.warn('[WARN] No track data in response:', response);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch track');
@@ -51,9 +62,9 @@ const Index = () => {
   if (error) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="bg-white p-8 rounded-lg shadow-md">
-          <h2 className="text-2xl font-bold text-red-600 mb-4">Error</h2>
-          <p className="text-gray-700">{error}</p>
+        <div className="flex-1 min-w-0">
+          <h3 className="text-sm font-medium text-gray-900 truncate">{track?.name}</h3>
+          <p className="text-sm text-gray-500 truncate">{track?.artists?.join(', ')}</p>
         </div>
       </div>
     );
@@ -99,9 +110,9 @@ const Index = () => {
           {/* Song Info */}
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold text-white mb-2 tracking-tight">
-              {track.title}
+              {track.name}
             </h1>
-            <p className="text-xl text-white/70 mb-1">{track.artist}</p>
+            <p className="text-xl text-white/70 mb-1">{track.artists.join(', ')}</p>
             <p className="text-lg text-white/50">{track.album}</p>
           </div>
 
