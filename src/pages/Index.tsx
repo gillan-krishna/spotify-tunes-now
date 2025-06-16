@@ -1,87 +1,74 @@
-
 import { useState, useEffect } from 'react';
 import { Play, Pause, SkipBack, SkipForward, Heart, Shuffle, Repeat } from 'lucide-react';
-import { getCurrentlyPlaying } from '@/services/spotifyAuth';
+import { getCurrentlyPlaying, Track } from '@/services/spotifyService';
 import { useToast } from '@/hooks/use-toast';
 
 const Index = () => {
+  const [track, setTrack] = useState<Track | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
   const [isLiked, setIsLiked] = useState(false);
-  const [currentSong, setCurrentSong] = useState({
-    title: "Loading...",
-    artist: "Fetching your music...",
-    album: "Please wait",
-    albumArt: "https://via.placeholder.com/320x320/1a1a1a/ffffff?text=Loading",
-    duration: "0:00",
-    currentTime: "0:00"
-  });
   const { toast } = useToast();
 
   // Fetch current track from Spotify
-  const fetchCurrentTrack = async () => {
+  const fetchTrack = async () => {
     try {
-      console.log('Fetching current track...');
-      const trackData = await getCurrentlyPlaying();
-      console.log('Track data received:', trackData);
-      
-      if (trackData.isPlaying && trackData.track) {
-        const track = trackData.track;
-        setCurrentSong({
-          title: track.title,
-          artist: track.artist,
-          album: track.album,
-          albumArt: track.albumArt || "https://via.placeholder.com/320x320/1a1a1a/ffffff?text=No+Image",
-          duration: formatTime(track.duration),
-          currentTime: formatTime(track.progress)
-        });
-        setIsPlaying(trackData.isPlaying);
-        setProgress((track.progress / track.duration) * 100);
-      } else {
-        setCurrentSong({
-          title: "No music playing",
-          artist: "Start playing music on Spotify",
-          album: "Your music will appear here",
-          albumArt: "https://via.placeholder.com/320x320/1a1a1a/ffffff?text=No+Track",
-          duration: "0:00",
-          currentTime: "0:00"
-        });
+      const response = await getCurrentlyPlaying();
+      console.log("[DEBUG] Frontend response from getCurrentlyPlaying:", response);
+      if (response.error) {
+        setError(response.error);
+        setTrack(null); // Clear track if there's an error
         setIsPlaying(false);
-        setProgress(0);
+        return;
       }
-    } catch (error) {
-      console.error('Error fetching current track:', error);
-      setCurrentSong({
-        title: "Unable to load music",
-        artist: "There was an error connecting to Spotify",
-        album: "Please try again later",
-        albumArt: "https://via.placeholder.com/320x320/1a1a1a/ffffff?text=Error",
-        duration: "0:00",
-        currentTime: "0:00"
-      });
-      setIsPlaying(false);
-      setProgress(0);
-    }
-  };
+      
+      if (!response.is_playing) {
+        setTrack(null);
+        setIsPlaying(false);
+        return;
+      }
 
-  // Format time from milliseconds to mm:ss
-  const formatTime = (ms: number) => {
-    const minutes = Math.floor(ms / 60000);
-    const seconds = Math.floor((ms % 60000) / 1000);
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+      if (response.track) {
+        setTrack(response.track);
+        setIsPlaying(response.is_playing);
+        setProgress((response.track.progress_ms / response.track.duration_ms) * 100);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch track');
+      setTrack(null);
+      setIsPlaying(false);
+    }
   };
 
   // Initial fetch and set up polling
   useEffect(() => {
-    fetchCurrentTrack();
-    
-    // Poll every 5 seconds for updates
-    const interval = setInterval(() => {
-      fetchCurrentTrack();
-    }, 5000);
-
+    fetchTrack();
+    const interval = setInterval(fetchTrack, 1000);
     return () => clearInterval(interval);
   }, []);
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="bg-white p-8 rounded-lg shadow-md">
+          <h2 className="text-2xl font-bold text-red-600 mb-4">Error</h2>
+          <p className="text-gray-700">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!track) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="bg-white p-8 rounded-lg shadow-md">
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">No Track Playing</h2>
+          <p className="text-gray-600">Start playing a track on Spotify to see it here.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center p-4">
@@ -91,11 +78,13 @@ const Index = () => {
           {/* Album Art */}
           <div className="relative mb-8">
             <div className="w-80 h-80 mx-auto rounded-2xl overflow-hidden shadow-2xl">
-              <img 
-                src={currentSong.albumArt} 
-                alt={currentSong.album}
-                className="w-full h-full object-cover"
-              />
+              {track.album_art && (
+                <img 
+                  src={track.album_art} 
+                  alt={track.album}
+                  className="w-full h-full object-cover"
+                />
+              )}
             </div>
             {/* Floating controls indicator */}
             <div className="absolute -bottom-4 left-1/2 transform -translate-x-1/2">
@@ -110,17 +99,17 @@ const Index = () => {
           {/* Song Info */}
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold text-white mb-2 tracking-tight">
-              {currentSong.title}
+              {track.title}
             </h1>
-            <p className="text-xl text-white/70 mb-1">{currentSong.artist}</p>
-            <p className="text-lg text-white/50">{currentSong.album}</p>
+            <p className="text-xl text-white/70 mb-1">{track.artist}</p>
+            <p className="text-lg text-white/50">{track.album}</p>
           </div>
 
           {/* Progress Bar */}
           <div className="mb-8">
             <div className="flex justify-between text-white/60 text-sm mb-2">
-              <span>{currentSong.currentTime}</span>
-              <span>{currentSong.duration}</span>
+              <span>{formatTime(track.progress_ms)}</span>
+              <span>{formatTime(track.duration_ms)}</span>
             </div>
             <div className="h-2 bg-white/10 rounded-full overflow-hidden">
               <div 
@@ -171,6 +160,13 @@ const Index = () => {
       </div>
     </div>
   );
+};
+
+// Format time from milliseconds to mm:ss
+const formatTime = (ms: number): string => {
+  const minutes = Math.floor(ms / 60000);
+  const seconds = Math.floor((ms % 60000) / 1000);
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
 };
 
 export default Index;
