@@ -14,7 +14,7 @@ export interface Track {
   name: string;
   artists: string[];
   album: string;
-  album_art: string | null;
+  album_art: string;
   duration_ms: number;
   progress_ms: number;
 }
@@ -24,18 +24,23 @@ interface CurrentlyPlayingResponse {
   track?: Track;
   message?: string;
   error?: string;
+  details?: string;
 }
 
-// In development, use the Vite proxy (/api prefix will be rewritten)
-// In production, use the full URL from environment variables
-const API_URL = import.meta.env.PROD 
-  ? (import.meta.env.VITE_API_URL || 'http://localhost:5000')
-  : '/api';
+// In development, we use the Vite proxy which forwards /api to the backend
+// In production, we use the full URL from environment variables
+const API_BASE = import.meta.env.PROD 
+  ? (import.meta.env.VITE_API_URL || 'https://spotify-tunes-now.onrender.com')
+  : ''; // In development, we'll use relative URLs that the proxy will handle
 
 export const getCurrentlyPlaying = async (): Promise<CurrentlyPlayingResponse> => {
   try {
-    console.log(`[DEBUG] Fetching from: ${API_URL}/api/current-track`);
-    const response = await fetch(`${API_URL}/api/current-track`);
+    const endpoint = '/api/current-track';
+    const url = import.meta.env.PROD 
+      ? `${API_BASE}${endpoint}`
+      : endpoint; // In development, use relative URL that will be handled by the proxy
+    console.log(`[DEBUG] Fetching from: ${url}`);
+    const response = await fetch(url);
     
     // Check if response is OK (status 200-299)
     if (!response.ok) {
