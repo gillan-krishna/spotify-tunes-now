@@ -9,48 +9,27 @@ from dotenv import load_dotenv
 # Initialize Flask app
 app = Flask(__name__)
 
-# Configure CORS for allowed domains
-# Only allow frontend origin and Spotify OAuth callback
-ALLOWED_ORIGINS = [
-    "http://localhost:3000",  # Frontend dev server
-    "http://127.0.0.1:3000"   # Alternative localhost for frontend
-]
+# Configure CORS for production domain
+ALLOWED_ORIGINS = "https://www.gillan.in"
 
-# Add production domains if not already in the list
-production_domains = [
-    "https://www.gillan.in",
-    "https://spotify-tunes-now.onrender.com",
-    "https://spotify-tunes-now.vercel.app"
-]
-
-for domain in production_domains:
-    if domain not in ALLOWED_ORIGINS:
-        ALLOWED_ORIGINS.append(domain)
-
-# Enable CORS with more permissive settings for development
-CORS(
+# Enable CORS with dynamic origin handling
+cors = CORS(
     app,
     resources={
         r"/*": {
-            "origins": "*" if os.getenv('FLASK_ENV') == 'development' else ALLOWED_ORIGINS,
+            "origins": ALLOWED_ORIGINS if os.getenv('FLASK_ENV') != 'development' else "*",
             "methods": ["GET", "OPTIONS", "POST", "PUT", "DELETE"],
             "allow_headers": ["Content-Type", "Authorization", "X-Requested-With"],
             "expose_headers": ["Content-Type"],
-            "supports_credentials": True
+            "supports_credentials": True,
+            "vary_header": True  # This will handle the Vary header properly
         }
     },
-    supports_credentials=True
+    supports_credentials=True,
+    automatic_options=True
 )
 
-# Add CORS headers to all responses
-@app.after_request
-def after_request(response):
-    response.headers.add('Access-Control-Allow-Origin', 
-                        '*' if os.getenv('FLASK_ENV') == 'development' else ','.join(ALLOWED_ORIGINS))
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
-    response.headers.add('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
-    response.headers.add('Access-Control-Allow-Credentials', 'true')
-    return response
+# The CORS middleware will handle setting the appropriate headers
 
 # Load environment variables
 load_dotenv()
