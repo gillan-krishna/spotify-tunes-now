@@ -40,7 +40,9 @@ export const exchangeCodeForTokens = async (code: string) => {
 
 export const getCurrentlyPlaying = async () => {
   try {
-    const { data, error } = await supabase.functions.invoke('spotify-current-track');
+    const { data, error } = await supabase.functions.invoke('spotify-current-track', {
+      method: 'GET'
+    });
     
     if (error) throw error;
     return data;
