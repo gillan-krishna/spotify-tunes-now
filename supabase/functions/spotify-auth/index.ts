@@ -8,6 +8,8 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
+  console.log('Spotify auth function called with method:', req.method)
+  
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
@@ -19,10 +21,21 @@ serve(async (req) => {
       { auth: { persistSession: false } }
     )
 
-    const { action, code } = await req.json()
+    const requestBody = await req.json()
+    console.log('Request body:', requestBody)
+    
+    const { action, code } = requestBody
     const clientId = Deno.env.get('SPOTIFY_CLIENT_ID')
     const clientSecret = Deno.env.get('SPOTIFY_CLIENT_SECRET')
+    
+    console.log('Environment check - Client ID exists:', !!clientId, 'Client Secret exists:', !!clientSecret)
+    
+    if (!clientId || !clientSecret) {
+      throw new Error('Spotify credentials not configured')
+    }
+
     const redirectUri = `${req.headers.get('origin')}/callback`
+    console.log('Redirect URI:', redirectUri)
 
     if (action === 'get-auth-url') {
       const scopes = [
@@ -41,6 +54,7 @@ serve(async (req) => {
         `scope=${encodeURIComponent(scopes)}&` +
         `show_dialog=true`
 
+      console.log('Generated auth URL successfully')
       return new Response(
         JSON.stringify({ authUrl }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -48,6 +62,7 @@ serve(async (req) => {
     }
 
     if (action === 'exchange-code') {
+      console.log('Exchanging code for tokens')
       const tokenResponse = await fetch('https://accounts.spotify.com/api/token', {
         method: 'POST',
         headers: {
@@ -62,8 +77,10 @@ serve(async (req) => {
       })
 
       const tokens = await tokenResponse.json()
+      console.log('Token exchange response status:', tokenResponse.status)
 
       if (!tokenResponse.ok) {
+        console.error('Token exchange failed:', tokens)
         throw new Error(tokens.error_description || 'Failed to exchange code for tokens')
       }
 
@@ -85,6 +102,7 @@ serve(async (req) => {
         throw error
       }
 
+      console.log('Tokens stored successfully')
       return new Response(
         JSON.stringify({ success: true }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -97,7 +115,7 @@ serve(async (req) => {
     )
 
   } catch (error) {
-    console.error('Error:', error)
+    console.error('Error in spotify-auth function:', error)
     return new Response(
       JSON.stringify({ error: error.message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
