@@ -1,43 +1,30 @@
 
 import { useState, useEffect } from 'react';
 import { Play, Pause, SkipBack, SkipForward, Heart, Shuffle, Repeat } from 'lucide-react';
-import { getSpotifyAuthUrl, getCurrentlyPlaying } from '@/services/spotifyAuth';
+import { getCurrentlyPlaying } from '@/services/spotifyAuth';
 import { useToast } from '@/hooks/use-toast';
 
 const Index = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [isLiked, setIsLiked] = useState(false);
-  const [isConnected, setIsConnected] = useState(false);
   const [currentSong, setCurrentSong] = useState({
-    title: "Connect Spotify to see music",
-    artist: "No track playing",
-    album: "Connect your account",
-    albumArt: "https://via.placeholder.com/320x320/1a1a1a/ffffff?text=No+Track",
+    title: "Loading...",
+    artist: "Fetching your music...",
+    album: "Please wait",
+    albumArt: "https://via.placeholder.com/320x320/1a1a1a/ffffff?text=Loading",
     duration: "0:00",
     currentTime: "0:00"
   });
   const { toast } = useToast();
 
-  // Check if Spotify is connected and fetch current track
-  useEffect(() => {
-    const checkSpotifyConnection = async () => {
-      try {
-        await fetchCurrentTrack();
-        setIsConnected(true);
-      } catch (error) {
-        console.error('Error checking Spotify connection:', error);
-        setIsConnected(false);
-      }
-    };
-
-    checkSpotifyConnection();
-  }, []);
-
   // Fetch current track from Spotify
   const fetchCurrentTrack = async () => {
     try {
+      console.log('Fetching current track...');
       const trackData = await getCurrentlyPlaying();
+      console.log('Track data received:', trackData);
+      
       if (trackData.isPlaying && trackData.track) {
         const track = trackData.track;
         setCurrentSong({
@@ -52,8 +39,8 @@ const Index = () => {
         setProgress((track.progress / track.duration) * 100);
       } else {
         setCurrentSong({
-          title: "No track currently playing",
-          artist: "Play some music on Spotify",
+          title: "No music playing",
+          artist: "Start playing music on Spotify",
           album: "Your music will appear here",
           albumArt: "https://via.placeholder.com/320x320/1a1a1a/ffffff?text=No+Track",
           duration: "0:00",
@@ -64,7 +51,16 @@ const Index = () => {
       }
     } catch (error) {
       console.error('Error fetching current track:', error);
-      throw error;
+      setCurrentSong({
+        title: "Unable to load music",
+        artist: "There was an error connecting to Spotify",
+        album: "Please try again later",
+        albumArt: "https://via.placeholder.com/320x320/1a1a1a/ffffff?text=Error",
+        duration: "0:00",
+        currentTime: "0:00"
+      });
+      setIsPlaying(false);
+      setProgress(0);
     }
   };
 
@@ -75,46 +71,17 @@ const Index = () => {
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
-  // Handle Spotify connection
-  const handleConnectSpotify = async () => {
-    try {
-      const authUrl = await getSpotifyAuthUrl();
-      window.location.href = authUrl;
-    } catch (error) {
-      console.error('Error connecting to Spotify:', error);
-      toast({
-        title: "Connection Error",
-        description: "Failed to connect to Spotify. Please try again.",
-        variant: "destructive"
-      });
-    }
-  };
-
-  // Poll for current track if connected
+  // Initial fetch and set up polling
   useEffect(() => {
-    if (isConnected) {
-      const interval = setInterval(() => {
-        fetchCurrentTrack().catch(() => {
-          // If fetch fails, we're probably not connected anymore
-          setIsConnected(false);
-        });
-      }, 5000);
-      return () => clearInterval(interval);
-    }
-  }, [isConnected]);
-
-  // Simulate progress bar movement for demo when not connected
-  useEffect(() => {
-    if (isConnected) return; // Don't simulate if actually connected
+    fetchCurrentTrack();
     
+    // Poll every 5 seconds for updates
     const interval = setInterval(() => {
-      if (isPlaying) {
-        setProgress(prev => prev >= 100 ? 0 : prev + 0.5);
-      }
-    }, 1000);
+      fetchCurrentTrack();
+    }, 5000);
 
     return () => clearInterval(interval);
-  }, [isPlaying, isConnected]);
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center p-4">
@@ -134,7 +101,7 @@ const Index = () => {
             <div className="absolute -bottom-4 left-1/2 transform -translate-x-1/2">
               <div className="bg-white/10 backdrop-blur-md rounded-full px-4 py-2 border border-white/20">
                 <span className="text-white/80 text-sm font-medium">
-                  {isConnected ? "Live from Spotify" : "Demo Mode"}
+                  Live from Spotify
                 </span>
               </div>
             </div>
@@ -172,7 +139,6 @@ const Index = () => {
               <SkipBack size={24} />
             </button>
             <button 
-              onClick={() => setIsPlaying(!isPlaying)}
               className="bg-white text-black rounded-full p-4 hover:scale-105 transition-transform shadow-lg"
             >
               {isPlaying ? <Pause size={24} /> : <Play size={24} />}
@@ -196,22 +162,11 @@ const Index = () => {
           </div>
         </div>
 
-        {/* Spotify Connect Info */}
+        {/* Info */}
         <div className="mt-6 text-center">
           <p className="text-white/60 text-sm">
-            {isConnected 
-              ? "Showing live music from your Spotify account" 
-              : "Connect your Spotify account to show your real-time music to visitors"
-            }
+            Showing live music from Spotify
           </p>
-          {!isConnected && (
-            <button 
-              onClick={handleConnectSpotify}
-              className="mt-3 bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-6 rounded-full transition-colors"
-            >
-              Connect Your Spotify
-            </button>
-          )}
         </div>
       </div>
     </div>
