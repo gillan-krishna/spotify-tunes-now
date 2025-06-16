@@ -25,7 +25,7 @@ interface CurrentlyPlayingResponse {
   error?: string;
 }
 
-const API_URL = 'https://spotify-tunes-now.onrender.com/';
+const API_URL = ' https://api.gillan.in';
 
 export const getCurrentlyPlaying = async (): Promise<CurrentlyPlayingResponse> => {
   try {
