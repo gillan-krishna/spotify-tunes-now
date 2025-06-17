@@ -9,8 +9,11 @@ from dotenv import load_dotenv
 # Initialize Flask app
 app = Flask(__name__)
 
-# Configure CORS for production domain
-ALLOWED_ORIGINS = "https://www.gillan.in"
+# Configure CORS for allowed domains
+ALLOWED_ORIGINS = [
+    "https://www.gillan.in",
+    "https://spotify-tunes-*-gillans-projects.vercel.app"
+]
 
 # Enable CORS with dynamic origin handling
 cors = CORS(
