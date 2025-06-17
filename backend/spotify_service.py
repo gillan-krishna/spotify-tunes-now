@@ -10,10 +10,16 @@ from dotenv import load_dotenv
 app = Flask(__name__)
 
 # Configure CORS for allowed domains
-ALLOWED_ORIGINS = [
-    "https://www.gillan.in",
-    "https://spotify-tunes-*-gillans-projects.vercel.app"
-]
+def get_allowed_origins():
+    if os.getenv('FLASK_ENV') == 'development':
+        return "*"
+    return [
+        "https://www.gillan.in",
+        "https://*.vercel.app",
+        "http://localhost:3000"  # For local development
+    ]
+
+ALLOWED_ORIGINS = get_allowed_origins()
 
 # Enable CORS with dynamic origin handling
 cors = CORS(
